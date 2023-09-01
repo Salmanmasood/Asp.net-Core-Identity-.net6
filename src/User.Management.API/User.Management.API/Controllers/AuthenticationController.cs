@@ -104,8 +104,6 @@ namespace User.Management.API.Controllers
                 {
                     authClaims.Add(new Claim(ClaimTypes.Role, role));
                 }
-
-
                 var jwtToken = GetToken(authClaims);
 
                 return Ok(new
@@ -171,14 +169,7 @@ namespace User.Management.API.Controllers
             return token;
         }
 
-        private dynamic ObjectResult(ApiResponse<T> response)
-        {
-            switch (response.)
-            {
-                default:
-            }
-
-        }
+   
 
     }
 }
