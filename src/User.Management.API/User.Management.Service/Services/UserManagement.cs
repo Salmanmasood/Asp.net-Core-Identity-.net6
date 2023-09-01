@@ -79,51 +79,6 @@ namespace User.Management.Service.Services
 
         }
 
-        public async Task<ApiResponse<GetOTPLoginResponse>> GetOtpByLoginAsync(LoginModel loginModel)
-        {
-            var user = await _userManager.FindByNameAsync(loginModel.Username);
-            if (user!=null)
-            {
-                if (user.TwoFactorEnabled)
-                {
-                    await _signInManager.SignOutAsync();
-                    await _signInManager.PasswordSignInAsync(user, loginModel.Password, false, true);
-                    var token = await _userManager.GenerateTwoFactorTokenAsync(user, "Email");
-                    return new ApiResponse<GetOTPLoginResponse>
-                    {
-                        Response = new GetOTPLoginResponse(){ IsTwoFactorEnable= user.TwoFactorEnabled, Token=token},
-                        IsSuccess = true,
-                        StatusCode = 200,
-                        Message = $"We have sent an OTP to your Email {user.Email}"
-                    };
-
-                }
-                else
-                {
-                    return new ApiResponse<GetOTPLoginResponse>
-                    {
-                        Response = new GetOTPLoginResponse() { IsTwoFactorEnable = user.TwoFactorEnabled,Token=string.Empty },
-                        IsSuccess = true,
-                        StatusCode = 204,
-                        Message = $"Two Factor Auth is not enable for this User."
-                    };
-
-
-                }
-
-            }
-            else
-            {
-                return new ApiResponse<GetOTPLoginResponse>
-                {
-                    Response = new GetOTPLoginResponse() { IsTwoFactorEnable = false, Token = string.Empty },
-                    IsSuccess = false,
-                    StatusCode = 404,
-                    Message = $"User not found"
-                };
-
-            }
-
-        }
+       
     }
 }
