@@ -5,10 +5,11 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using User.Management.API.Models;
-using User.Management.API.Models.Authentication.Login;
-using User.Management.API.Models.Authentication.SignUp;
 using User.Management.Service.Models;
+using User.Management.Service.Models.Authentication.Login;
+using User.Management.Service.Models.Authentication.SignUp;
 using User.Management.Service.Services;
+using static Humanizer.In;
 
 namespace User.Management.API.Controllers
 {
@@ -20,69 +21,41 @@ namespace User.Management.API.Controllers
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IEmailService _emailService;
+        private readonly IUserManagement _user;
+
         private readonly IConfiguration _configuration;
 
         public AuthenticationController(UserManager<IdentityUser> userManager,
             RoleManager<IdentityRole> roleManager, IEmailService emailService,
-            SignInManager<IdentityUser> signInManager, IConfiguration configuration)
+            SignInManager<IdentityUser> signInManager,
+            IUserManagement user,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _signInManager = signInManager;
             _emailService = emailService;
             _configuration = configuration;
+            _user= user;
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register([FromBody] RegisterUser registerUser, string role)
+        public async Task<IActionResult> Register([FromBody] RegisterUser registerUser)
         {
-            //Check User Exist 
-            var userExist = await _userManager.FindByEmailAsync(registerUser.Email);
-            if (userExist != null)
+            var tokenResponse = await _user.CreateUserWithTokenAsync(registerUser);
+            if (tokenResponse.IsSuccess && tokenResponse.Response!=null)
             {
-                return StatusCode(StatusCodes.Status403Forbidden,
-                    new Response { Status = "Error", Message = "User already exists!" });
-            }
-
-            //Add the User in the database
-            IdentityUser user = new()
-            {
-                Email = registerUser.Email,
-                SecurityStamp = Guid.NewGuid().ToString(),
-                UserName = registerUser.Username,
-                TwoFactorEnabled=true
-            };
-            if (await _roleManager.RoleExistsAsync(role))
-            {
-                var result = await _userManager.CreateAsync(user, registerUser.Password);
-                if (!result.Succeeded)
-                {
-                    return StatusCode(StatusCodes.Status500InternalServerError,
-                        new Response { Status = "Error", Message = "User Failed to Create" });
-                }
-                //Add role to the user....
-
-                await _userManager.AddToRoleAsync(user, role);
-
-                //Add Token to Verify the email....
-                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { token, email = user.Email }, Request.Scheme);
-                var message = new Message(new string[] { user.Email! }, "Confirmation email link", confirmationLink!);
+                await _user.AssignRoleToUserAsync(registerUser.Roles,tokenResponse.Response.User);
+                var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { tokenResponse.Response.Token, email = registerUser.Email }, Request.Scheme);
+                var message = new Message(new string[] { registerUser.Email! }, "Confirmation email link", confirmationLink!);
                 _emailService.SendEmail(message);
-
-
-
                 return StatusCode(StatusCodes.Status200OK,
-                    new Response { Status = "Success", Message = $"User created & Email Sent to {user.Email} SuccessFully" });
+                        new Response { IsSuccess=true, Message = tokenResponse.Message});
 
             }
-            else
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError,
-                        new Response { Status = "Error", Message = "This Role Doesnot Exist." });
-            }
 
-
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                  new Response { Message = tokenResponse.Message,IsSuccess=false });
         }
 
         [HttpGet("ConfirmEmail")]
@@ -119,7 +92,7 @@ namespace User.Management.API.Controllers
                 return StatusCode(StatusCodes.Status200OK,
                  new Response { Status = "Success", Message = $"We have sent an OTP to your Email {user.Email}" });
             }
-            if (user!=null && await _userManager.CheckPasswordAsync(user,loginModel.Password))
+            if (user != null && await _userManager.CheckPasswordAsync(user, loginModel.Password))
             {
                 var authClaims = new List<Claim>
                 {
@@ -131,7 +104,7 @@ namespace User.Management.API.Controllers
                 {
                     authClaims.Add(new Claim(ClaimTypes.Role, role));
                 }
-                
+
 
                 var jwtToken = GetToken(authClaims);
 
@@ -144,19 +117,19 @@ namespace User.Management.API.Controllers
 
             }
             return Unauthorized();
-           
+
 
         }
-        
+
         [HttpPost]
         [Route("login-2FA")]
-        public async Task<IActionResult> LoginWithOTP(string code,string username)
+        public async Task<IActionResult> LoginWithOTP(string code, string username)
         {
             var user = await _userManager.FindByNameAsync(username);
-            var signIn= await _signInManager.TwoFactorSignInAsync("Email", code, false, false);
+            var signIn = await _signInManager.TwoFactorSignInAsync("Email", code, false, false);
             if (signIn.Succeeded)
             {
-                if (user != null )
+                if (user != null)
                 {
                     var authClaims = new List<Claim>
                 {
@@ -183,7 +156,6 @@ namespace User.Management.API.Controllers
             return StatusCode(StatusCodes.Status404NotFound,
                 new Response { Status = "Success", Message = $"Invalid Code" });
         }
-
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
@@ -199,6 +171,14 @@ namespace User.Management.API.Controllers
             return token;
         }
 
+        private dynamic ObjectResult(ApiResponse<T> response)
+        {
+            switch (response.)
+            {
+                default:
+            }
+
+        }
 
     }
 }
