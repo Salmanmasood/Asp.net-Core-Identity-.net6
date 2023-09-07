@@ -79,6 +79,57 @@ namespace User.Management.Service.Services
 
         }
 
-       
+        public async Task<ApiResponse<LoginOtpResponse>> GetOtpByLoginAsync(LoginModel loginModel)
+        {   
+            var user = await _userManager.FindByNameAsync(loginModel.Username);
+            if (user != null)
+            {
+
+
+                await _signInManager.SignOutAsync();
+                await _signInManager.PasswordSignInAsync(user, loginModel.Password, false, true);
+                if (user.TwoFactorEnabled)
+                {
+                    var token = await _userManager.GenerateTwoFactorTokenAsync(user, "Email");
+                    return new ApiResponse<LoginOtpResponse>
+                    {
+                        Response = new LoginOtpResponse()
+                        {
+                            User = user,
+                            Token = token,
+                            IsTwoFactorEnable = user.TwoFactorEnabled
+                        },
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        Message = $"OTP send to the email {user.Email}"
+                    };
+
+                }
+                else
+                {
+                    return new ApiResponse<LoginOtpResponse>
+                    {
+                        Response = new LoginOtpResponse()
+                        {
+                            User = user,
+                            Token = string.Empty,
+                            IsTwoFactorEnable = user.TwoFactorEnabled
+                        },
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        Message = $"2FA is not enabled"
+                    };
+                }
+            }
+            else
+            {
+                return new ApiResponse<LoginOtpResponse>
+                {
+                    IsSuccess = false,
+                    StatusCode = 404,
+                    Message = $"User doesnot exist."
+                };
+            }
+        }
     }
 }
