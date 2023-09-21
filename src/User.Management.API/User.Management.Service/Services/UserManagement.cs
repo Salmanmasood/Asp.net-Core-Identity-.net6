@@ -9,6 +9,10 @@ using User.Management.Service.Models.Authentication.SignUp;
 using Microsoft.Extensions.Configuration;
 using User.Management.Service.Models.Authentication.User;
 using User.Management.Service.Models.Authentication.Login;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace User.Management.Service.Services
 {
@@ -17,15 +21,16 @@ namespace User.Management.Service.Services
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-  
+        private readonly IConfiguration _configuration;
 
         public UserManagement(UserManager<IdentityUser> userManager,
-            RoleManager<IdentityRole> roleManager, IEmailService emailService,
+            RoleManager<IdentityRole> roleManager,
             SignInManager<IdentityUser> signInManager, IConfiguration configuration)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _signInManager = signInManager;
+            _configuration = configuration;
         
         }
 
@@ -78,7 +83,6 @@ namespace User.Management.Service.Services
             }
 
         }
-
         public async Task<ApiResponse<LoginOtpResponse>> GetOtpByLoginAsync(LoginModel loginModel)
         {   
             var user = await _userManager.FindByNameAsync(loginModel.Username);
@@ -131,5 +135,51 @@ namespace User.Management.Service.Services
                 };
             }
         }
+        public async Task<ApiResponse<JwtToken>> GetJwtTokenAsync(IdentityUser user)
+        {
+            var authClaims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, user.UserName),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                };
+
+            var userRoles = await _userManager.GetRolesAsync(user);
+            foreach (var role in userRoles)
+            {
+                authClaims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
+            var jwtToken = GetToken(authClaims);
+
+            
+            return new ApiResponse<JwtToken>
+            {
+                Response = new JwtToken()
+                {
+                    Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                    ExpiryTokenDate = jwtToken.ValidTo
+                },
+                IsSuccess = true,
+                StatusCode = 200,
+                Message = $"Token created"
+            };
+        }
+
+        private JwtSecurityToken GetToken(List<Claim> authClaims)
+        {
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
+                expires: DateTime.Now.AddDays(2),
+                claims: authClaims,
+                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+                );
+
+            return token;
+        }
+
+
     }
 }
