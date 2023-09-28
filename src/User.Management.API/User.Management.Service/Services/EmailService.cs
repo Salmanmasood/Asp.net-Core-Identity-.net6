@@ -1,5 +1,6 @@
 ﻿using MailKit.Net.Smtp;
 using MimeKit;
+using User.Management.Service.Constants;
 using User.Management.Service.Models;
 
 namespace User.Management.Service.Services
@@ -8,10 +9,12 @@ namespace User.Management.Service.Services
     {
         private readonly EmailConfiguration _emailConfig;
         public EmailService(EmailConfiguration emailConfig) => _emailConfig = emailConfig;
-        public void SendEmail(Message message)
+        public string SendEmail(Message message)
         {
             var emailMessage = CreateEmailMessage(message);
             Send(emailMessage);
+            var recipients = string.Join(", ", message.To);
+            return ResponseMessages.GetEmailSuccessMessage(recipients);
         }
 
         private MimeMessage CreateEmailMessage(Message message)
