@@ -13,6 +13,7 @@ using User.Management.Service.Models.Authentication.SignUp;
 using User.Management.Service.Models.Authentication.User;
 using User.Management.Service.Services;
 using static Humanizer.In;
+using static System.Net.WebRequestMethods;
 
 namespace User.Management.API.Controllers
 {
@@ -49,7 +50,11 @@ namespace User.Management.API.Controllers
             if (tokenResponse.IsSuccess && tokenResponse.Response!=null)
             {
                 await _user.AssignRoleToUserAsync(registerUser.Roles,tokenResponse.Response.User);
-                var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { tokenResponse.Response.Token, email = registerUser.Email }, Request.Scheme);
+
+                var confirmationLink = $"http://localhost:4200/confirm-account?Token={tokenResponse.Response.Token}&email={registerUser.Email}";  
+                    
+                    //Url.Action(nameof(ConfirmEmail), "Authentication", new { tokenResponse.Response.Token, email = registerUser.Email }, Request.Scheme);
+                
                 var message = new Message(new string[] { registerUser.Email! }, "Confirmation email link", confirmationLink!);
                 var responseMsg= _emailService.SendEmail(message);
                 return StatusCode(StatusCodes.Status200OK,
@@ -123,9 +128,9 @@ namespace User.Management.API.Controllers
             return StatusCode(StatusCodes.Status404NotFound,
                 new Response { Status = "Success", Message = $"Invalid Code" });
         }
-      
 
-   
+
+        //
 
     }
 }
