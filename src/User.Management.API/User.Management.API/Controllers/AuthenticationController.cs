@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using User.Management.API.Models;
+using User.Management.Data.Models;
 using User.Management.Service.Models;
 using User.Management.Service.Models.Authentication.Login;
 using User.Management.Service.Models.Authentication.SignUp;
@@ -21,17 +22,17 @@ namespace User.Management.API.Controllers
     [ApiController]
     public class AuthenticationController : ControllerBase
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IEmailService _emailService;
         private readonly IUserManagement _user;
 
         private readonly IConfiguration _configuration;
 
-        public AuthenticationController(UserManager<IdentityUser> userManager,
+        public AuthenticationController(UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager, IEmailService emailService,
-            SignInManager<IdentityUser> signInManager,
+            SignInManager<ApplicationUser> signInManager,
             IUserManagement user,
             IConfiguration configuration)
         {

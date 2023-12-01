@@ -13,19 +13,20 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using User.Management.Data.Models;
 
 namespace User.Management.Service.Services
 {
     public class UserManagement : IUserManagement
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
 
-        public UserManagement(UserManager<IdentityUser> userManager,
+        public UserManagement(UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            SignInManager<IdentityUser> signInManager, IConfiguration configuration)
+            SignInManager<ApplicationUser> signInManager, IConfiguration configuration)
         {
             _userManager = userManager;
             _roleManager = roleManager;
@@ -34,7 +35,7 @@ namespace User.Management.Service.Services
         
         }
 
-        public async Task<ApiResponse<List<string>>> AssignRoleToUserAsync(List<string> roles, IdentityUser user)
+        public async Task<ApiResponse<List<string>>> AssignRoleToUserAsync(List<string> roles, ApplicationUser user)
         {
             var assignedRole = new List<string>();
             foreach (var role in roles)
@@ -62,7 +63,7 @@ namespace User.Management.Service.Services
             {
                 return new ApiResponse<CreateUserResponse> { IsSuccess = false, StatusCode = 403, Message = "User already exists!" };
             }
-            IdentityUser user = new()
+            ApplicationUser user = new()
             {
                 Email = registerUser.Email,
                 SecurityStamp = Guid.NewGuid().ToString(),
@@ -135,7 +136,7 @@ namespace User.Management.Service.Services
                 };
             }
         }
-        public async Task<ApiResponse<JwtToken>> GetJwtTokenAsync(IdentityUser user)
+        public async Task<ApiResponse<JwtToken>> GetJwtTokenAsync(ApplicationUser user)
         {
             var authClaims = new List<Claim>
                 {
