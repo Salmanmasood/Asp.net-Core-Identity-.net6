@@ -51,21 +51,21 @@ namespace User.Management.Data.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "41b299a0-c8f5-4e14-93b8-27665bf5f03f",
+                            Id = "06fffaac-375e-4f66-9a02-b09f8e1c4b22",
                             ConcurrencyStamp = "1",
                             Name = "Admin",
                             NormalizedName = "Admin"
                         },
                         new
                         {
-                            Id = "138764ca-e58d-44ac-b42c-414383fbdae0",
+                            Id = "d0c7a5b6-0f03-47e9-91fa-15afad51eca0",
                             ConcurrencyStamp = "2",
                             Name = "User",
                             NormalizedName = "User"
                         },
                         new
                         {
-                            Id = "2bd9e3f3-71f9-44c6-a0cb-93edc48bbbb9",
+                            Id = "e30c42ce-8a24-4a13-a10b-f07d3b205e16",
                             ConcurrencyStamp = "3",
                             Name = "HR",
                             NormalizedName = "HR"
@@ -221,10 +221,9 @@ namespace User.Management.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("RefreshToken")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("RefreshTokenExpiry")
+                    b.Property<DateTime?>("RefreshTokenExpiry")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("SecurityStamp")

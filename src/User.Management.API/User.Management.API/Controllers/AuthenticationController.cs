@@ -23,24 +23,16 @@ namespace User.Management.API.Controllers
     public class AuthenticationController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IEmailService _emailService;
         private readonly IUserManagement _user;
 
-        private readonly IConfiguration _configuration;
-
         public AuthenticationController(UserManager<ApplicationUser> userManager,
-            RoleManager<IdentityRole> roleManager, IEmailService emailService,
-            SignInManager<ApplicationUser> signInManager,
+            IEmailService emailService,
             IUserManagement user,
             IConfiguration configuration)
         {
             _userManager = userManager;
-            _roleManager = roleManager;
-            _signInManager = signInManager;
             _emailService = emailService;
-            _configuration = configuration;
             _user= user;
         }
 
@@ -52,9 +44,9 @@ namespace User.Management.API.Controllers
             {
                 await _user.AssignRoleToUserAsync(registerUser.Roles,tokenResponse.Response.User);
 
-                var confirmationLink = $"http://localhost:4200/confirm-account?Token={tokenResponse.Response.Token}&email={registerUser.Email}";  
-                    
-                    //Url.Action(nameof(ConfirmEmail), "Authentication", new { tokenResponse.Response.Token, email = registerUser.Email }, Request.Scheme);
+               // var confirmationLink = $"http://localhost:4200/confirm-account?Token={tokenResponse.Response.Token}&email={registerUser.Email}";
+
+                var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { tokenResponse.Response.Token, email = registerUser.Email }, Request.Scheme);
                 
                 var message = new Message(new string[] { registerUser.Email! }, "Confirmation email link", confirmationLink!);
                 var responseMsg= _emailService.SendEmail(message);
@@ -114,17 +106,12 @@ namespace User.Management.API.Controllers
 
         [HttpPost]
         [Route("login-2FA")]
-        public async Task<IActionResult> LoginWithOTP(string code, string username)
+        public async Task<IActionResult> LoginWithOTP(string code, string userName)
         {
-            var user = await _userManager.FindByNameAsync(username);
-            var signIn = await _signInManager.TwoFactorSignInAsync("Email", code, false, false);
-            if (signIn.Succeeded)
+            var jwt =await _user.LoginUserWithJWTokenAsync(code, userName);
+            if (jwt.IsSuccess)
             {
-                if (user != null)
-                {
-                var serviceResponse=   await _user.GetJwtTokenAsync(user);
-                    return Ok(serviceResponse);
-                }
+                return Ok(jwt);
             }
             return StatusCode(StatusCodes.Status404NotFound,
                 new Response { Status = "Success", Message = $"Invalid Code" });

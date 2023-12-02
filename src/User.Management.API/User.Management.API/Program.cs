@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
@@ -32,9 +33,26 @@ builder.Services.AddCors(options =>
 
 
 // For Identity
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
+//builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+//    .AddEntityFrameworkStores<ApplicationDbContext>()
+//    .AddDefaultTokenProviders();
+
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    // Other identity options
+    options.Tokens.ProviderMap["Email"] = new TokenProviderDescriptor(typeof(EmailTokenProvider<ApplicationUser>));
+}).AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
+
+
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+{
+    // Set the expiration time for the OTP
+    options.TokenLifespan = TimeSpan.FromMinutes(5); // Adjust the time span as needed
+});
+
 
 //Add Config for Required Email
 builder.Services.Configure<IdentityOptions>(

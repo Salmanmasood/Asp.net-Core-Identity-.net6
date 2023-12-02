@@ -54,7 +54,6 @@ namespace User.Management.Service.Services
             ,Response=assignedRole
             };
         }
-
         public async Task<ApiResponse<CreateUserResponse>> CreateUserWithTokenAsync(RegisterUser registerUser)
         {
             //Check User Exist 
@@ -89,8 +88,6 @@ namespace User.Management.Service.Services
             var user = await _userManager.FindByNameAsync(loginModel.Username);
             if (user != null)
             {
-
-
                 await _signInManager.SignOutAsync();
                 await _signInManager.PasswordSignInAsync(user, loginModel.Password, false, true);
                 if (user.TwoFactorEnabled)
@@ -166,14 +163,17 @@ namespace User.Management.Service.Services
             };
         }
 
+
+
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
+            _ = int.TryParse(_configuration["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["JWT:ValidIssuer"],
                 audience: _configuration["JWT:ValidAudience"],
-                expires: DateTime.Now.AddDays(2),
+                expires: DateTime.Now.AddMinutes(tokenValidityInMinutes),
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
                 );
@@ -181,6 +181,23 @@ namespace User.Management.Service.Services
             return token;
         }
 
-
+        public async Task<ApiResponse<JwtToken>> LoginUserWithJWTokenAsync(string otp, string userName)
+        {
+            var user = await _userManager.FindByNameAsync(userName);
+            var signIn = await _signInManager.TwoFactorSignInAsync("Email", otp, false, false);
+            if (signIn.Succeeded)
+            {
+                if (user != null)
+                {
+                    return await GetJwtTokenAsync(user);
+                }
+            }
+            return new ApiResponse<JwtToken>
+            {
+                IsSuccess = false,
+                StatusCode = 400,
+                Message = $"Invalid Otp"
+            };
+        }
     }
 }
