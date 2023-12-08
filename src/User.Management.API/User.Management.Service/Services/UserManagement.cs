@@ -14,6 +14,7 @@ using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using User.Management.Data.Models;
+using System.Security.Cryptography;
 
 namespace User.Management.Service.Services
 {
@@ -147,9 +148,15 @@ namespace User.Management.Service.Services
                 authClaims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            var jwtToken = GetToken(authClaims);
+            var jwtToken = GetToken(authClaims); //access token
+            var refreshToken = GenerateRefreshToken();
+            _ = int.TryParse(_configuration["JWT:RefreshTokenValidity"], out int refreshTokenValidity);
 
-            
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(refreshTokenValidity);
+
+          await  _userManager.UpdateAsync(user);
+
             return new ApiResponse<JwtToken>
             {
                 Response = new JwtToken()
@@ -162,25 +169,7 @@ namespace User.Management.Service.Services
                 Message = $"Token created"
             };
         }
-
-
-
-        private JwtSecurityToken GetToken(List<Claim> authClaims)
-        {
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
-            _ = int.TryParse(_configuration["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["JWT:ValidIssuer"],
-                audience: _configuration["JWT:ValidAudience"],
-                expires: DateTime.Now.AddMinutes(tokenValidityInMinutes),
-                claims: authClaims,
-                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-                );
-
-            return token;
-        }
-
+        
         public async Task<ApiResponse<JwtToken>> LoginUserWithJWTokenAsync(string otp, string userName)
         {
             var user = await _userManager.FindByNameAsync(userName);
@@ -199,5 +188,37 @@ namespace User.Management.Service.Services
                 Message = $"Invalid Otp"
             };
         }
+
+        #region PrivateMethods
+        private JwtSecurityToken GetToken(List<Claim> authClaims)
+        {
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
+            _ = int.TryParse(_configuration["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
+            var expirationTimeUtc = DateTime.UtcNow.AddMinutes(tokenValidityInMinutes);
+            var localTimeZone = TimeZoneInfo.Local;
+            var expirationTimeInLocalTimeZone = TimeZoneInfo.ConvertTimeFromUtc(expirationTimeUtc, localTimeZone);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
+                expires: expirationTimeInLocalTimeZone,
+                claims: authClaims,
+                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+                );
+
+            return token;
+        }
+
+        private string GenerateRefreshToken()
+        {
+            var randomNumber = new Byte[64];
+            var range = RandomNumberGenerator.Create();
+            range.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
+        }
+
+        
+        #endregion
+
     }
 }
