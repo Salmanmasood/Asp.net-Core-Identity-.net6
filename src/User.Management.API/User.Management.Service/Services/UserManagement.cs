@@ -134,7 +134,7 @@ namespace User.Management.Service.Services
                 };
             }
         }
-        public async Task<ApiResponse<JwtToken>> GetJwtTokenAsync(ApplicationUser user)
+        public async Task<ApiResponse<LoginResponse>> GetJwtTokenAsync(ApplicationUser user)
         {
             var authClaims = new List<Claim>
                 {
@@ -157,20 +157,29 @@ namespace User.Management.Service.Services
 
           await  _userManager.UpdateAsync(user);
 
-            return new ApiResponse<JwtToken>
+            return new ApiResponse<LoginResponse>
+            { 
+                Response=new LoginResponse()
             {
-                Response = new JwtToken()
-                {
-                    Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                    ExpiryTokenDate = jwtToken.ValidTo
-                },
+                    AccessToken=new TokenType()
+                    {
+                        Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                        ExpiryTokenDate = jwtToken.ValidTo
+                    },
+                    RefreshToken=new TokenType()
+                    {
+                        Token = user.RefreshToken,
+                        ExpiryTokenDate = (DateTime)user.RefreshTokenExpiry
+                    }
+            },
+
                 IsSuccess = true,
                 StatusCode = 200,
                 Message = $"Token created"
             };
         }
         
-        public async Task<ApiResponse<JwtToken>> LoginUserWithJWTokenAsync(string otp, string userName)
+        public async Task<ApiResponse<LoginResponse>> LoginUserWithJWTokenAsync(string otp, string userName)
         {
             var user = await _userManager.FindByNameAsync(userName);
             var signIn = await _signInManager.TwoFactorSignInAsync("Email", otp, false, false);
@@ -181,8 +190,12 @@ namespace User.Management.Service.Services
                     return await GetJwtTokenAsync(user);
                 }
             }
-            return new ApiResponse<JwtToken>
-            {
+            return new ApiResponse<LoginResponse>() { 
+
+                Response=new LoginResponse()
+                {
+
+                },
                 IsSuccess = false,
                 StatusCode = 400,
                 Message = $"Invalid Otp"
