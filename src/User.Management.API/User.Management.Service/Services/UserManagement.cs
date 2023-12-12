@@ -178,7 +178,6 @@ namespace User.Management.Service.Services
                 Message = $"Token created"
             };
         }
-        
         public async Task<ApiResponse<LoginResponse>> LoginUserWithJWTokenAsync(string otp, string userName)
         {
             var user = await _userManager.FindByNameAsync(userName);
@@ -202,6 +201,27 @@ namespace User.Management.Service.Services
             };
         }
 
+        public async Task<ApiResponse<LoginResponse>> RenewAccessTokenAsync(LoginResponse tokens)
+        {
+            var accessToken = tokens.AccessToken;
+            var refreshToken = tokens.RefreshToken;
+            var principal= GetClaimsPrincipal(accessToken.Token);
+            var user =await _userManager.FindByNameAsync(principal.Identity.Name);
+            if (refreshToken.Token!=user.RefreshToken && refreshToken.ExpiryTokenDate<=DateTime.Now )
+            {
+                return new ApiResponse<LoginResponse>
+                {
+                   
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    Message = $"Token invalid or expired"
+                };
+            }
+            var response = await GetJwtTokenAsync(user);
+            return response;
+         }
+
+
         #region PrivateMethods
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
@@ -221,7 +241,6 @@ namespace User.Management.Service.Services
 
             return token;
         }
-
         private string GenerateRefreshToken()
         {
             var randomNumber = new Byte[64];
@@ -230,7 +249,26 @@ namespace User.Management.Service.Services
             return Convert.ToBase64String(randomNumber);
         }
 
-        
+        private ClaimsPrincipal GetClaimsPrincipal(string accessToken) 
+        {
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateAudience = false,
+                ValidateIssuer = false,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"])),
+                ValidateLifetime = false
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var principal = tokenHandler.ValidateToken(accessToken, tokenValidationParameters, out SecurityToken securityToken);
+
+            return principal;
+
+        }
+
+
+
         #endregion
 
     }

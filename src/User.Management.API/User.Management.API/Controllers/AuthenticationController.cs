@@ -116,6 +116,18 @@ namespace User.Management.API.Controllers
                 new Response { Status = "Success", Message = $"Invalid Code" });
         }
 
+        [HttpPost]
+        [Route("Refresh-Token")]
+        public async Task<IActionResult> RefreshToken(LoginResponse tokens)
+        {
+            var jwt = await _user.RenewAccessTokenAsync(tokens);
+            if (jwt.IsSuccess)
+            {
+                return Ok(jwt);
+            }
+            return StatusCode(StatusCodes.Status404NotFound,
+                new Response { Status = "Success", Message = $"Invalid Code" });
+        }
 
         //
 
