@@ -2,10 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using System.Web;
 using User.Management.API.Models;
 using User.Management.Data.Models;
 using User.Management.Service.Models;
@@ -43,11 +40,11 @@ namespace User.Management.API.Controllers
             if (tokenResponse.IsSuccess && tokenResponse.Response!=null)
             {
                 await _user.AssignRoleToUserAsync(registerUser.Roles,tokenResponse.Response.User);
-
-               // var confirmationLink = $"http://localhost:4200/confirm-account?Token={tokenResponse.Response.Token}&email={registerUser.Email}";
-                var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { tokenResponse.Response.Token, email = registerUser.Email }, Request.Scheme);
+             
+                var confirmationLink = $"http://localhost:4200/confirm-account?Token={HttpUtility.UrlEncode(tokenResponse.Response.Token)}&email={HttpUtility.UrlEncode(registerUser.Email)}";
+               // var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { tokenResponse.Response.Token, email = registerUser.Email }, Request.Scheme);
                 
-                var message = new Message(new string[] { registerUser.Email! }, "Confirmation email link", confirmationLink!);
+                var message = new Message(new string[] { registerUser.Email! }, "Confirmation email link",  confirmationLink!);
                 var responseMsg= _emailService.SendEmail(message);
                 return StatusCode(StatusCodes.Status200OK,
                         new Response { IsSuccess=true, Message = $"{tokenResponse.Message} {responseMsg}" });
