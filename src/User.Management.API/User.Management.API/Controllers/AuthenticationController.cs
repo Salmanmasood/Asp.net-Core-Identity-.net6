@@ -102,12 +102,13 @@ namespace User.Management.API.Controllers
 
         [HttpPost]
         [Route("login-2FA")]
-        public async Task<IActionResult> LoginWithOTP(string code, string userName)
+        public async Task<IActionResult> LoginWithOTP(LoginWithOTP loginWithOTP)
         {
-            var jwt =await _user.LoginUserWithJWTokenAsync(code, userName);
+            var jwt =await _user.LoginUserWithJWTokenAsync(loginWithOTP.Code, loginWithOTP.Username);
             if (jwt.IsSuccess)
             {
                 return Ok(jwt);
+                
             }
             return StatusCode(StatusCodes.Status404NotFound,
                 new Response { Status = "Success", Message = $"Invalid Code" });
