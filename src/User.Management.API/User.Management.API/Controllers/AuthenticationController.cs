@@ -42,8 +42,7 @@ namespace User.Management.API.Controllers
                 await _user.AssignRoleToUserAsync(registerUser.Roles,tokenResponse.Response.User);
              
                 var confirmationLink = $"http://localhost:4200/confirm-account?Token={HttpUtility.UrlEncode(tokenResponse.Response.Token)}&email={HttpUtility.UrlEncode(registerUser.Email)}";
-               // var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { tokenResponse.Response.Token, email = registerUser.Email }, Request.Scheme);
-                
+               
                 var message = new Message(new string[] { registerUser.Email! }, "Confirmation email link",  confirmationLink!);
                 var responseMsg= _emailService.SendEmail(message);
                 return StatusCode(StatusCodes.Status200OK,
